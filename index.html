@@ -170,3 +170,118 @@ function onPlatform(){
   180>p.x && 180<p.x+p.w &&
   y+40>=p.y && y+40<=p.y+10
  );
+}
+
+// ===== СМЕРТЬ =====
+function die(){
+ if(dead) return;
+ dead = true;
+ vy = 0;
+
+ explosionSound();
+ spawnParticles(180, y+20);
+
+ setTimeout(reset, 2000);
+}
+
+// ===== ПАРТИКЛЫ =====
+function spawnParticles(px,py){
+ for(let i=0;i<30;i++){
+  particles.push({
+   x:px, y:py,
+   vx:Math.random()*6-3,
+   vy:Math.random()*-6,
+   life:40
+  });
+ }
+}
+
+// ===== РЕСТАРТ =====
+function reset(){
+ y = 420;
+ vy = 0;
+ dead = false;
+ progress = 0;
+ spikes = [];
+ platforms = [];
+ particles = [];
+}
+
+// ===== ЦИКЛ =====
+function loop(){
+ ctx.clearRect(0,0,360,520);
+
+ if(!dead){
+  progress += speed;
+  vy += gravity;
+  y += vy;
+  if(y>420){ y=420; vy=0; }
+
+  if(Math.random()<0.025) spikes.push({x:360});
+  if(Math.random()<0.03) platforms.push({x:360,y:350,w:80});
+ }
+
+ spikes.forEach(s=>s.x-=speed);
+ platforms.forEach(p=>p.x-=speed);
+
+ // КУБ (НЕ РИСУЕТСЯ ПОСЛЕ СМЕРТИ)
+ if(!dead){
+  ctx.fillStyle = skin.body1;
+  ctx.fillRect(160,y,40,40);
+  ctx.fillStyle = skin.body2;
+  ctx.fillRect(165,y+5,30,30);
+  ctx.fillStyle = skin.eyes;
+  ctx.fillRect(170,y+15,5,5);
+  ctx.fillRect(185,y+15,5,5);
+ }
+
+ // ПЛАТФОРМЫ
+ ctx.fillStyle="#ff00ff";
+ platforms.forEach(p=>{
+  ctx.fillRect(p.x,p.y,p.w,12);
+  if(!dead && onPlatform()){
+   y=p.y-40;
+   vy=0;
+  }
+ });
+
+ // ШИПЫ
+ ctx.fillStyle="#ff3333";
+ spikes.forEach(s=>{
+  ctx.beginPath();
+  ctx.moveTo(s.x,460);
+  ctx.lineTo(s.x+25,420);
+  ctx.lineTo(s.x+50,460);
+  ctx.fill();
+  if(!dead && s.x<200 && s.x+50>160 && y+40>420){
+   die();
+  }
+ });
+
+ // ПАРТИКЛЫ
+ particles.forEach(p=>{
+  p.x+=p.vx;
+  p.y+=p.vy;
+  p.vy+=0.3;
+  p.life--;
+  ctx.fillStyle=skin.body1;
+  ctx.fillRect(p.x,p.y,3,3);
+ });
+ particles = particles.filter(p=>p.life>0);
+
+ // ФИНИШ
+ if(progress>=LEVEL_LENGTH){
+  coins+=25;
+  saveProgress();
+  canvas.style.display="none";
+  menu.style.display="flex";
+ }
+
+ requestAnimationFrame(loop);
+}
+
+loop();
+</script>
+
+</body>
+</html>
