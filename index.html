@@ -9,7 +9,7 @@
 body{
  margin:0;
  background:#050510;
- font-family:Arial, sans-serif;
+ font-family:Arial;
  overflow:hidden;
  color:#0ff;
 }
@@ -43,15 +43,14 @@ h1,h2{
 input[type=color]{
  width:60px;
  height:40px;
- border:none;
  margin:5px;
+ border:none;
 }
 </style>
 </head>
 
 <body>
 
-<!-- МЕНЮ -->
 <div class="menu" id="menu">
  <h1>NEON DASH</h1>
  <button onclick="startGame()">▶ ИГРАТЬ</button>
@@ -59,18 +58,12 @@ input[type=color]{
  <p>Монеты: <span id="coinsText">0</span></p>
 </div>
 
-<!-- МАГАЗИН -->
 <div class="shop" id="shop" style="display:none">
  <h2>МАГАЗИН</h2>
  <p>Монеты: <span id="coinsText2">0</span></p>
 
- <h3>СКИН</h3>
- <button onclick="buySkin()">Купить форму (50)</button>
+ <button onclick="buyColor()">Купить неон-цвет (20)</button>
 
- <h3>ЦВЕТА</h3>
- <button onclick="buyColor('c2')">Неон-цвет (20)</button>
-
- <h3>ВЫБОР ЦВЕТОВ</h3>
  <div>
   Цвет 1 <input type="color" id="c1">
   Цвет 2 <input type="color" id="c2">
@@ -84,23 +77,11 @@ input[type=color]{
 <canvas id="game" width="360" height="520"></canvas>
 
 <script>
-// ================== ДАННЫЕ ==================
+// ===== ПРОГРЕСС =====
 let coins = Number(localStorage.coins || 0);
+let owned = JSON.parse(localStorage.owned || '{"c1":true,"c2":false}');
+let skin = JSON.parse(localStorage.skin || '{"body1":"#00ffff","body2":"#00aaff","eyes":"#ffffff"}');
 
-// БАЗОВЫЕ ВЕЩИ ДОСТУПНЫ
-let owned = JSON.parse(
- localStorage.owned ||
- '{"skin":true,"c1":true,"c2":false}'
-);
-
-let skin = JSON.parse(
- localStorage.skin ||
- '{"body1":"#00ffff","body2":"#00aaff","eyes":"#ffffff","outline":"#000000"}'
-);
-
-// ================== UI ==================
-const coinsText = document.getElementById("coinsText");
-const coinsText2 = document.getElementById("coinsText2");
 coinsText.textContent = coins;
 coinsText2.textContent = coins;
 
@@ -108,11 +89,11 @@ c1.value = skin.body1;
 c2.value = skin.body2;
 eyes.value = skin.eyes;
 
-// ================== CANVAS ==================
+// ===== CANVAS =====
 const canvas = document.getElementById("game");
 const ctx = canvas.getContext("2d");
 
-// ================== ИГРА ==================
+// ===== ИГРА =====
 let y, vy, dead;
 let gravity = 0.9;
 let speed = 6;
@@ -123,12 +104,12 @@ let spikes = [];
 let platforms = [];
 let particles = [];
 
-// ================== ЗВУК ВЗРЫВА ==================
+// ===== ЗВУК =====
 function explosionSound(){
  const a = new AudioContext();
  const o = a.createOscillator();
  const g = a.createGain();
- o.type = "sawtooth";
+ o.type="sawtooth";
  o.frequency.setValueAtTime(200,a.currentTime);
  o.frequency.exponentialRampToValueAtTime(40,a.currentTime+0.4);
  g.gain.setValueAtTime(0.6,a.currentTime);
@@ -137,63 +118,51 @@ function explosionSound(){
  o.start(); o.stop(a.currentTime+0.4);
 }
 
-// ================== МЕНЮ ==================
+// ===== МЕНЮ =====
 function startGame(){
  menu.style.display="none";
  canvas.style.display="block";
  reset();
 }
-
 function openShop(){
  menu.style.display="none";
  shop.style.display="flex";
  coinsText2.textContent = coins;
 }
-
 function closeShop(){
  shop.style.display="none";
  menu.style.display="flex";
 }
 
-// ================== МАГАЗИН ==================
-function buySkin(){
- if(coins>=50){
-  coins-=50;
-  owned.skin=true;
-  saveProgress();
- }
-}
-
-function buyColor(type){
- if(type==="c2" && coins>=20){
+// ===== МАГАЗИН =====
+function buyColor(){
+ if(coins>=20){
   coins-=20;
   owned.c2=true;
   saveProgress();
  }
 }
-
 function saveSkin(){
- if(owned.c1) skin.body1=c1.value;
- if(owned.c2) skin.body2=c2.value;
- skin.eyes=eyes.value;
+ skin.body1 = c1.value;
+ if(owned.c2) skin.body2 = c2.value;
+ skin.eyes = eyes.value;
  saveProgress();
 }
-
 function saveProgress(){
- localStorage.coins=coins;
- localStorage.owned=JSON.stringify(owned);
- localStorage.skin=JSON.stringify(skin);
- coinsText.textContent=coins;
- coinsText2.textContent=coins;
+ localStorage.coins = coins;
+ localStorage.owned = JSON.stringify(owned);
+ localStorage.skin = JSON.stringify(skin);
+ coinsText.textContent = coins;
+ coinsText2.textContent = coins;
 }
 
-// ================== УПРАВЛЕНИЕ ==================
-addEventListener("click",jump);
-addEventListener("touchstart",jump);
+// ===== УПРАВЛЕНИЕ =====
+addEventListener("click", jump);
+addEventListener("touchstart", jump);
 
 function jump(){
  if(dead) return;
- if(y>=420 || onPlatform()) vy = -16;
+ if(y>=420 || onPlatform()) vy=-16;
 }
 
 function onPlatform(){
@@ -201,115 +170,3 @@ function onPlatform(){
   180>p.x && 180<p.x+p.w &&
   y+40>=p.y && y+40<=p.y+10
  );
-}
-
-// ================== СМЕРТЬ ==================
-function die(){
- if(dead) return;
- dead=true;
- explosionSound();
- spawnParticles(180,y+20);
- setTimeout(reset,2000);
-}
-
-// ================== ПАРТИКЛЫ ==================
-function spawnParticles(px,py){
- for(let i=0;i<25;i++){
-  particles.push({
-   x:px,
-   y:py,
-   vx:Math.random()*6-3,
-   vy:Math.random()*-6,
-   life:40
-  });
- }
-}
-
-// ================== РЕСТАРТ ==================
-function reset(){
- y=420;
- vy=0;
- dead=false;
- progress=0;
- spikes=[];
- platforms=[];
- particles=[];
-}
-
-// ================== ЦИКЛ ==================
-function loop(){
- ctx.clearRect(0,0,360,520);
-
- if(!dead){
-  progress+=speed;
-  vy+=gravity;
-  y+=vy;
-  if(y>420){y=420;vy=0;}
-
-  if(Math.random()<0.025)
-   spikes.push({x:360});
-
-  if(Math.random()<0.03)
-   platforms.push({x:360,y:350,w:80});
- }
-
- spikes.forEach(s=>s.x-=speed);
- platforms.forEach(p=>p.x-=speed);
-
- // КУБ
- ctx.fillStyle=skin.body1;
- ctx.fillRect(160,y,40,40);
- ctx.fillStyle=skin.body2;
- ctx.fillRect(165,y+5,30,30);
- ctx.fillStyle=skin.eyes;
- ctx.fillRect(170,y+15,5,5);
- ctx.fillRect(185,y+15,5,5);
-
- // ПЛАТФОРМЫ
- ctx.fillStyle="#ff00ff";
- platforms.forEach(p=>{
-  ctx.fillRect(p.x,p.y,p.w,12);
-  if(!dead && onPlatform()){
-   y=p.y-40; vy=0;
-  }
- });
-
- // ШИПЫ
- ctx.fillStyle="#ff3333";
- spikes.forEach(s=>{
-  ctx.beginPath();
-  ctx.moveTo(s.x,460);
-  ctx.lineTo(s.x+25,420);
-  ctx.lineTo(s.x+50,460);
-  ctx.fill();
-  if(!dead && s.x<200 && s.x+50>160 && y+40>420)
-   die();
- });
-
- // ПАРТИКЛЫ
- particles.forEach(p=>{
-  p.x+=p.vx;
-  p.y+=p.vy;
-  p.vy+=0.3;
-  p.life--;
-  ctx.fillStyle=skin.body1;
-  ctx.fillRect(p.x,p.y,3,3);
- });
- particles = particles.filter(p=>p.life>0);
-
- // ФИНИШ
- if(progress>=LEVEL_LENGTH){
-  coins+=25;
-  saveProgress();
-  canvas.style.display="none";
-  menu.style.display="flex";
- }
-
- requestAnimationFrame(loop);
-}
-
-loop();
-</script>
-
-</body>
-</html>
