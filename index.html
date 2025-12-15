@@ -18,7 +18,7 @@ canvas{
  margin:auto;
  background:#050510;
 }
-.menu,.shop{
+.menu{
  position:absolute;
  inset:0;
  display:flex;
@@ -37,15 +37,7 @@ button{
  box-shadow:0 0 20px #0ff;
  border-radius:8px;
 }
-h1,h2{
- text-shadow:0 0 25px #0ff;
-}
-input[type=color]{
- width:60px;
- height:40px;
- margin:5px;
- border:none;
-}
+h1{text-shadow:0 0 25px #0ff;}
 </style>
 </head>
 
@@ -54,24 +46,7 @@ input[type=color]{
 <div class="menu" id="menu">
  <h1>NEON DASH</h1>
  <button onclick="startGame()">▶ ИГРАТЬ</button>
- <button onclick="openShop()">🛒 МАГАЗИН</button>
  <p>Монеты: <span id="coinsText">0</span></p>
-</div>
-
-<div class="shop" id="shop" style="display:none">
- <h2>МАГАЗИН</h2>
- <p>Монеты: <span id="coinsText2">0</span></p>
-
- <button onclick="buyColor()">Купить неон-цвет (20)</button>
-
- <div>
-  Цвет 1 <input type="color" id="c1">
-  Цвет 2 <input type="color" id="c2">
-  Глаза <input type="color" id="eyes">
- </div>
-
- <button onclick="saveSkin()">СОХРАНИТЬ</button>
- <button onclick="closeShop()">← Назад</button>
 </div>
 
 <canvas id="game" width="360" height="520"></canvas>
@@ -79,15 +54,7 @@ input[type=color]{
 <script>
 // ===== ПРОГРЕСС =====
 let coins = Number(localStorage.coins || 0);
-let owned = JSON.parse(localStorage.owned || '{"c1":true,"c2":false}');
-let skin = JSON.parse(localStorage.skin || '{"body1":"#00ffff","body2":"#00aaff","eyes":"#ffffff"}');
-
 coinsText.textContent = coins;
-coinsText2.textContent = coins;
-
-c1.value = skin.body1;
-c2.value = skin.body2;
-eyes.value = skin.eyes;
 
 // ===== CANVAS =====
 const canvas = document.getElementById("game");
@@ -104,7 +71,7 @@ let spikes = [];
 let platforms = [];
 let particles = [];
 
-// ===== ЗВУК =====
+// ===== ЗВУК ВЗРЫВА =====
 function explosionSound(){
  const a = new AudioContext();
  const o = a.createOscillator();
@@ -123,37 +90,6 @@ function startGame(){
  menu.style.display="none";
  canvas.style.display="block";
  reset();
-}
-function openShop(){
- menu.style.display="none";
- shop.style.display="flex";
- coinsText2.textContent = coins;
-}
-function closeShop(){
- shop.style.display="none";
- menu.style.display="flex";
-}
-
-// ===== МАГАЗИН =====
-function buyColor(){
- if(coins>=20){
-  coins-=20;
-  owned.c2=true;
-  saveProgress();
- }
-}
-function saveSkin(){
- skin.body1 = c1.value;
- if(owned.c2) skin.body2 = c2.value;
- skin.eyes = eyes.value;
- saveProgress();
-}
-function saveProgress(){
- localStorage.coins = coins;
- localStorage.owned = JSON.stringify(owned);
- localStorage.skin = JSON.stringify(skin);
- coinsText.textContent = coins;
- coinsText2.textContent = coins;
 }
 
 // ===== УПРАВЛЕНИЕ =====
@@ -211,31 +147,31 @@ function reset(){
 function loop(){
  ctx.clearRect(0,0,360,520);
 
+ // ===== ДВИЖЕНИЕ ТОЛЬКО ЕСЛИ ЖИВ =====
  if(!dead){
   progress += speed;
+
   vy += gravity;
   y += vy;
   if(y>420){ y=420; vy=0; }
 
   if(Math.random()<0.025) spikes.push({x:360});
   if(Math.random()<0.03) platforms.push({x:360,y:350,w:80});
+
+  spikes.forEach(s=>s.x-=speed);
+  platforms.forEach(p=>p.x-=speed);
  }
 
- spikes.forEach(s=>s.x-=speed);
- platforms.forEach(p=>p.x-=speed);
-
- // КУБ (НЕ РИСУЕТСЯ ПОСЛЕ СМЕРТИ)
+ // ===== КУБ (НЕ РИСУЕТСЯ ПОСЛЕ СМЕРТИ) =====
  if(!dead){
-  ctx.fillStyle = skin.body1;
+  ctx.fillStyle="#00ffff";
   ctx.fillRect(160,y,40,40);
-  ctx.fillStyle = skin.body2;
-  ctx.fillRect(165,y+5,30,30);
-  ctx.fillStyle = skin.eyes;
+  ctx.fillStyle="#ffffff";
   ctx.fillRect(170,y+15,5,5);
   ctx.fillRect(185,y+15,5,5);
  }
 
- // ПЛАТФОРМЫ
+ // ===== ПЛАТФОРМЫ =====
  ctx.fillStyle="#ff00ff";
  platforms.forEach(p=>{
   ctx.fillRect(p.x,p.y,p.w,12);
@@ -245,7 +181,7 @@ function loop(){
   }
  });
 
- // ШИПЫ
+ // ===== ШИПЫ =====
  ctx.fillStyle="#ff3333";
  spikes.forEach(s=>{
   ctx.beginPath();
@@ -258,23 +194,23 @@ function loop(){
   }
  });
 
- // ПАРТИКЛЫ
+ // ===== ПАРТИКЛЫ (ВСЕГДА ДВИГАЮТСЯ) =====
  particles.forEach(p=>{
   p.x+=p.vx;
   p.y+=p.vy;
   p.vy+=0.3;
   p.life--;
-  ctx.fillStyle=skin.body1;
+  ctx.fillStyle="#00ffff";
   ctx.fillRect(p.x,p.y,3,3);
  });
  particles = particles.filter(p=>p.life>0);
 
- // ФИНИШ
- if(progress>=LEVEL_LENGTH){
+ // ===== ФИНИШ =====
+ if(!dead && progress>=LEVEL_LENGTH){
   coins+=25;
-  saveProgress();
-  canvas.style.display="none";
+  localStorage.coins = coins;
   menu.style.display="flex";
+  canvas.style.display="none";
  }
 
  requestAnimationFrame(loop);
