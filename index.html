@@ -3,43 +3,180 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Cube Jump</title>
+<title>Neon Cube</title>
+
 <style>
-body{margin:0;background:#111;color:white;text-align:center;font-family:Arial}
-button{font-size:22px;padding:15px 30px}
-canvas{background:#222;display:none;margin:20px auto}
+body{
+ margin:0;
+ background:#05050a;
+ color:#0ff;
+ font-family:Arial;
+ text-align:center;
+ overflow:hidden;
+}
+
+#menu{
+ position:absolute;
+ inset:0;
+ display:flex;
+ flex-direction:column;
+ justify-content:center;
+ align-items:center;
+ background:radial-gradient(circle,#0a0a1f,#000);
+}
+
+h1{
+ font-size:40px;
+ text-shadow:0 0 20px #0ff;
+}
+
+.mode{
+ font-size:26px;
+ margin:10px;
+ padding:12px 25px;
+ border:2px solid #0ff;
+ color:#0ff;
+ background:transparent;
+ box-shadow:0 0 15px #0ff;
+}
+
+button{
+ font-size:22px;
+ padding:15px 35px;
+ margin-top:20px;
+ background:#0ff;
+ border:none;
+ color:#000;
+ box-shadow:0 0 25px #0ff;
+}
+
+canvas{
+ display:none;
+ margin:0 auto;
+ background:#05050a;
+}
 </style>
 </head>
+
 <body>
 
-<h1>Cube Jump</h1>
-<button onclick="start()">▶ ИГРАТЬ</button>
-<canvas id="c" width="360" height="500"></canvas>
+<div id="menu">
+ <h1>NEON CUBE</h1>
+ <div>
+  <button class="mode" onclick="selectMode('cube')">⬛ Кубик</button>
+  <button class="mode" onclick="selectMode('ship')">✈️ Самолёт</button>
+  <button class="mode" onclick="selectMode('robot')">🤖 Робот</button>
+ </div>
+ <button onclick="start()">▶ ИГРАТЬ</button>
+ <p>Тапай / кликай</p>
+</div>
+
+<canvas id="game" width="360" height="520"></canvas>
 
 <script>
-const c=document.getElementById('c'),x=c.getContext('2d');
-let y=400,vy=0,run=false,sp=[];
-function start(){
- document.querySelector('button').style.display='none';
- c.style.display='block';run=true;loop();
+const c = document.getElementById('game');
+const x = c.getContext('2d');
+
+let mode='cube';
+let y=420, vy=0;
+let gravity=0.9;
+let spikes=[];
+let run=false;
+let speed=4;
+let score=0;
+
+function selectMode(m){
+ mode=m;
 }
-document.addEventListener('click',()=>{if(run&&y>=400)vy=-18});
+
+function start(){
+ document.getElementById('menu').style.display='none';
+ c.style.display='block';
+ y=420;vy=0;spikes=[];score=0;
+ run=true;
+ loop();
+}
+
+document.addEventListener('click',jump);
+document.addEventListener('touchstart',jump);
+
+function jump(){
+ if(!run)return;
+ if(mode==='cube'||mode==='robot'){
+  if(y>=420)vy=-16;
+ }
+ if(mode==='ship'){
+  vy-=2.5;
+ }
+}
+
 function loop(){
  if(!run)return;
- x.clearRect(0,0,360,500);
- vy+=1;y+=vy;if(y>400){y=400;vy=0}
- x.fillStyle='#0ff';x.fillRect(160,y,40,40);
- if(Math.random()<0.02)sp.push({x:360});
- x.fillStyle='red';
- for(let s of sp){
-  s.x-=5;
+ x.clearRect(0,0,360,520);
+
+ // physics
+ vy+=gravity;
+ y+=vy;
+ if(y>420){y=420;vy=0}
+ if(y<0)y=0;
+
+ // player
+ x.shadowColor='#0ff';
+ x.shadowBlur=20;
+ x.fillStyle='#0ff';
+
+ if(mode==='cube')x.fillRect(160,y,40,40);
+ if(mode==='robot')x.fillRect(155,y-10,50,50);
+ if(mode==='ship'){
   x.beginPath();
-  x.moveTo(s.x,440);x.lineTo(s.x+30,400);x.lineTo(s.x+60,440);x.fill();
-  if(s.x<200&&s.x+60>160&&y+40>400){run=false;x.fillText('GAME OVER',130,250)}
+  x.moveTo(180,y);
+  x.lineTo(150,y+35);
+  x.lineTo(210,y+35);
+  x.fill();
  }
- sp=sp.filter(s=>s.x>-60);
+
+ // spikes
+ if(Math.random()<0.015){
+  spikes.push({x:360});
+ }
+
+ x.shadowColor='#f0f';
+ x.fillStyle='#f0f';
+
+ for(let s of spikes){
+  s.x-=speed;
+  x.beginPath();
+  x.moveTo(s.x,460);
+  x.lineTo(s.x+25,420);
+  x.lineTo(s.x+50,460);
+  x.fill();
+
+  if(s.x<200 && s.x+50>160 && y+40>420){
+   gameOver();
+  }
+ }
+
+ spikes=spikes.filter(s=>s.x>-60);
+
+ // score
+ score++;
+ x.shadowBlur=0;
+ x.fillStyle='#0ff';
+ x.fillText('Score: '+score,10,30);
+ x.fillText('Mode: '+mode,10,50);
+
  requestAnimationFrame(loop);
 }
+
+function gameOver(){
+ run=false;
+ setTimeout(()=>{
+  alert('GAME OVER\nScore: '+score);
+  location.reload();
+ },100);
+}
 </script>
+
 </body>
 </html>
+
