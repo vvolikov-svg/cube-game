@@ -1,0 +1,45 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Cube Jump</title>
+<style>
+body{margin:0;background:#111;color:white;text-align:center;font-family:Arial}
+button{font-size:22px;padding:15px 30px}
+canvas{background:#222;display:none;margin:20px auto}
+</style>
+</head>
+<body>
+
+<h1>Cube Jump</h1>
+<button onclick="start()">▶ ИГРАТЬ</button>
+<canvas id="c" width="360" height="500"></canvas>
+
+<script>
+const c=document.getElementById('c'),x=c.getContext('2d');
+let y=400,vy=0,run=false,sp=[];
+function start(){
+ document.querySelector('button').style.display='none';
+ c.style.display='block';run=true;loop();
+}
+document.addEventListener('click',()=>{if(run&&y>=400)vy=-18});
+function loop(){
+ if(!run)return;
+ x.clearRect(0,0,360,500);
+ vy+=1;y+=vy;if(y>400){y=400;vy=0}
+ x.fillStyle='#0ff';x.fillRect(160,y,40,40);
+ if(Math.random()<0.02)sp.push({x:360});
+ x.fillStyle='red';
+ for(let s of sp){
+  s.x-=5;
+  x.beginPath();
+  x.moveTo(s.x,440);x.lineTo(s.x+30,400);x.lineTo(s.x+60,440);x.fill();
+  if(s.x<200&&s.x+60>160&&y+40>400){run=false;x.fillText('GAME OVER',130,250)}
+ }
+ sp=sp.filter(s=>s.x>-60);
+ requestAnimationFrame(loop);
+}
+</script>
+</body>
+</html>
