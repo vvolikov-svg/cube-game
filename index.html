@@ -3,46 +3,18 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Neon Platform Cube</title>
+<title>Neon Dash</title>
 
 <style>
 body{
  margin:0;
  background:#050510;
- color:#0ff;
- font-family:Arial;
- text-align:center;
  overflow:hidden;
+ font-family:Arial;
 }
-
-#menu{
- position:absolute;
- inset:0;
- display:flex;
- flex-direction:column;
- justify-content:center;
- align-items:center;
- background:radial-gradient(circle,#0a0a25,#000);
-}
-
-h1{
- font-size:42px;
- text-shadow:0 0 25px #0ff;
-}
-
-button{
- font-size:24px;
- padding:16px 40px;
- margin-top:20px;
- background:#0ff;
- border:none;
- color:#000;
- box-shadow:0 0 30px #0ff;
-}
-
 canvas{
- display:none;
- margin:0 auto;
+ display:block;
+ margin:auto;
  background:#050510;
 }
 </style>
@@ -50,148 +22,175 @@ canvas{
 
 <body>
 
-<div id="menu">
- <h1>NEON CUBE</h1>
- <button onclick="start()">▶ ИГРАТЬ</button>
- <p>Тапай для прыжка</p>
-</div>
-
 <canvas id="game" width="360" height="520"></canvas>
 
 <script>
 const c = document.getElementById("game");
 const x = c.getContext("2d");
 
-let y=420, vy=0;
-let gravity=0.9;
-let speed=6; // быстрее
-let run=false;
-let score=0;
+let y = 420, vy = 0;
+let gravity = 0.9;
+let speed = 6;
+let run = true;
 
-let platforms=[];
-let coins=[];
+let spikes = [];
+let plats = [];
+let particles = [];
 
-function start(){
- document.getElementById("menu").style.display="none";
- c.style.display="block";
- y=420; vy=0;
- score=0;
- platforms=[];
- coins=[];
- run=true;
- loop();
+// === НАСТРОЙКИ СКИНА ===
+const skin = {
+ body1: "#00ffff",
+ body2: "#ff00ff",
+ eyes: "#ffffff",
+ outline: "#000000"
+};
+
+// === ЗВУК ВЗРЫВА ===
+function explosionSound(){
+ const ctx = new AudioContext();
+ const o = ctx.createOscillator();
+ const g = ctx.createGain();
+ o.type = "sawtooth";
+ o.frequency.setValueAtTime(200, ctx.currentTime);
+ o.frequency.exponentialRampToValueAtTime(40, ctx.currentTime + 0.3);
+ g.gain.setValueAtTime(0.5, ctx.currentTime);
+ g.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.3);
+ o.connect(g);
+ g.connect(ctx.destination);
+ o.start();
+ o.stop(ctx.currentTime + 0.3);
 }
 
-document.addEventListener("click",jump);
-document.addEventListener("touchstart",jump);
+// === УПРАВЛЕНИЕ ===
+addEventListener("click", jump);
+addEventListener("touchstart", jump);
 
 function jump(){
- if(!run)return;
- if(y>=420 || onPlatform()){
-  vy=-16;
+ if(!run) return;
+ if(y >= 420 || onPlatform()){
+  vy = -16;
  }
 }
 
+// === ПРОВЕРКА ПЛАТФОРМ ===
 function onPlatform(){
- for(let p of platforms){
-  if(180>p.x && 180<p.x+p.w &&
-     y+40>=p.y && y+40<=p.y+10){
-     return true;
-  }
- }
- return false;
+ return plats.some(p =>
+  180 > p.x && 180 < p.x + p.w &&
+  y + 40 >= p.y && y + 40 <= p.y + 10
+ );
 }
 
+// === ПАРТИКЛЫ ===
+function spawnParticles(px, py){
+ for(let i=0;i<20;i++){
+  particles.push({
+   x:px, y:py,
+   vx:Math.random()*6-3,
+   vy:Math.random()*-6,
+   life:30
+  });
+ }
+}
+
+// === СМЕРТЬ ===
+function die(){
+ if(!run) return;
+ run = false;
+ explosionSound();
+ spawnParticles(180, y+20);
+
+ setTimeout(()=>{
+  y = 420;
+  vy = 0;
+  spikes = [];
+  plats = [];
+  particles = [];
+  run = true;
+  loop();
+ },2000);
+}
+
+// === ИГРОВОЙ ЦИКЛ ===
 function loop(){
- if(!run)return;
+ if(!run) return;
+
  x.clearRect(0,0,360,520);
 
- // physics
- vy+=gravity;
- y+=vy;
- if(y>420){y=420;vy=0}
+ // физика
+ vy += gravity;
+ y += vy;
+ if(y > 420){ y = 420; vy = 0; }
 
- // player
- x.shadowColor="#0ff";
- x.shadowBlur=20;
- x.fillStyle="#0ff";
- x.fillRect(160,y,40,40);
+ // генерация
+ if(Math.random() < 0.03)
+  plats.push({x:360, y:350, w:80});
+ if(Math.random() < 0.025)
+  spikes.push({x:360});
 
- // spawn platforms
- if(Math.random()<0.03){
-  let h = Math.random()<0.5 ? 350 : 280; // обычный путь
-  platforms.push({x:360,y:h,w:80});
- }
+ plats.forEach(p => p.x -= speed);
+ spikes.forEach(s => s.x -= speed);
 
- // secret platforms (опасные)
- if(Math.random()<0.008){
-  platforms.push({x:360,y:200,w:60,secret:true});
-  coins.push({x:380,y:170,taken:false});
- }
+ // === КУБ ===
+ x.shadowBlur = 20;
+ x.shadowColor = skin.body1;
 
- // draw platforms
- x.shadowColor="#f0f";
- for(let p of platforms){
-  x.fillStyle = p.secret ? "#ff0" : "#f0f";
-  x.fillRect(p.x,p.y,p.w,12);
+ x.fillStyle = skin.outline;
+ x.fillRect(158, y-2, 44, 44);
 
-  // collision
-  if(180>p.x && 180<p.x+p.w &&
-     y+40>=p.y && y+40<=p.y+vy){
-     y=p.y-40;
-     vy=0;
+ x.fillStyle = skin.body1;
+ x.fillRect(160, y, 40, 40);
+
+ x.fillStyle = skin.body2;
+ x.fillRect(165, y+5, 30, 30);
+
+ // глаза
+ x.fillStyle = skin.eyes;
+ x.fillRect(170, y+15, 5, 5);
+ x.fillRect(185, y+15, 5, 5);
+
+ // === ПЛАТФОРМЫ ===
+ x.shadowColor = "#ff00ff";
+ x.fillStyle = "#ff00ff";
+ plats.forEach(p=>{
+  x.fillRect(p.x, p.y, p.w, 12);
+  if(180 > p.x && 180 < p.x + p.w &&
+     y + 40 >= p.y && y + 40 <= p.y + vy){
+      y = p.y - 40;
+      vy = 0;
   }
+ });
 
-  p.x-=speed;
- }
+ // === ШИПЫ ===
+ x.shadowColor = "#ff0000";
+ x.fillStyle = "#ff0000";
+ spikes.forEach(s=>{
+  x.beginPath();
+  x.moveTo(s.x,460);
+  x.lineTo(s.x+25,420);
+  x.lineTo(s.x+50,460);
+  x.fill();
 
- // coins
- x.shadowColor="#ff0";
- x.fillStyle="#ff0";
- for(let c1 of coins){
-  if(!c1.taken){
-   x.beginPath();
-   x.arc(c1.x,c1.y,8,0,Math.PI*2);
-   x.fill();
-
-   if(Math.abs(c1.x-180)<15 && Math.abs(c1.y-(y+20))<15){
-    c1.taken=true;
-    score+=200; // награда за секрет
-   }
+  if(s.x < 200 && s.x + 50 > 160 && y + 40 > 420){
+   die();
   }
-  c1.x-=speed;
- }
+ });
 
- // ground
- x.shadowBlur=0;
- x.fillStyle="#0ff";
- x.fillRect(0,460,360,4);
-
- // cleanup
- platforms=platforms.filter(p=>p.x>-100);
- coins=coins.filter(c1=>c1.x>-50);
-
- // score
- score++;
- x.fillText("Score: "+score,10,30);
-
- // death
- if(y>480){
-  gameOver();
- }
+ // === ПАРТИКЛЫ ===
+ x.shadowBlur = 0;
+ particles.forEach(p=>{
+  p.x += p.vx;
+  p.y += p.vy;
+  p.life--;
+  x.fillStyle = "#00ffff";
+  x.fillRect(p.x, p.y, 3, 3);
+ });
+ particles = particles.filter(p=>p.life>0);
 
  requestAnimationFrame(loop);
 }
 
-function gameOver(){
- run=false;
- setTimeout(()=>{
-  alert("GAME OVER\nScore: "+score);
-  location.reload();
- },100);
-}
+loop();
 </script>
 
 </body>
 </html>
-
